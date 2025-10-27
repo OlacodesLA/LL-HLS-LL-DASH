@@ -234,7 +234,13 @@ export default function StreamingPlayer({
         className="absolute inset-0 flex items-center justify-center cursor-pointer"
         onClick={handlePlayPause}
       >
-        <button className="bg-black/70 hover:bg-black/90 rounded-full p-2 sm:p-4 transition-all hover:scale-110 opacity-70 sm:opacity-0 sm:group-hover:opacity-100">
+        <button
+          className={`bg-black/70 hover:bg-black/90 rounded-full p-2 sm:p-4 transition-all hover:scale-110 ${
+            isPlaying
+              ? "opacity-0 sm:opacity-0 sm:group-hover:opacity-100"
+              : "opacity-70 sm:opacity-0 sm:group-hover:opacity-100"
+          }`}
+        >
           {isPlaying ? (
             <svg
               className="w-8 h-8 sm:w-12 sm:h-12 text-white"
