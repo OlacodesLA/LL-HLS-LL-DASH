@@ -27,12 +27,53 @@ export default function StreamingPlayer({
   const [error, setError] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
+  const [librariesReady, setLibrariesReady] = useState(false);
 
   // Use intersection observer to detect when video is in viewport
   const { ref, inView } = useInView({
     threshold: 0.5, // Trigger when 50% of video is visible
     triggerOnce: false,
   });
+
+  // Check if streaming libraries are loaded (race condition fix)
+  useEffect(() => {
+    const checkLibraries = () => {
+      const hlsReady = typeof window !== "undefined" && window.Hls;
+      const dashReady = typeof window !== "undefined" && window.dashjs;
+
+      // Libraries are ready if either HLS or DASH is available
+      // or if native HLS is supported (Safari)
+      if (
+        hlsReady ||
+        dashReady ||
+        videoRef.current?.canPlayType("application/vnd.apple.mpegurl")
+      ) {
+        setLibrariesReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (checkLibraries()) return;
+
+    // If not ready, poll every 100ms until ready
+    const interval = setInterval(() => {
+      if (checkLibraries()) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    // Cleanup after 5 seconds to prevent infinite polling
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -58,7 +99,7 @@ export default function StreamingPlayer({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !librariesReady) return;
 
     const loadStream = async () => {
       try {
@@ -162,7 +203,7 @@ export default function StreamingPlayer({
         dashRef.current.reset();
       }
     };
-  }, [format, hlsUrl, dashUrl]);
+  }, [format, hlsUrl, dashUrl, librariesReady]);
 
   const handlePlayPause = (e?: React.MouseEvent) => {
     e?.stopPropagation();
